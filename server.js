@@ -14,12 +14,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Cargar catálogo oficial de Mercadona (4.300 productos con fotos oficiales)
+// Cargar catálogo oficial exclusivo de Mercadona (https://tienda.mercadona.es/)
 let mercadonaCatalog = [];
 try {
   if (fs.existsSync(MERCADONA_FILE)) {
     mercadonaCatalog = JSON.parse(fs.readFileSync(MERCADONA_FILE, 'utf8'));
-    console.log(`✅ Catálogo oficial de Mercadona cargado: ${mercadonaCatalog.length} productos.`);
+    console.log(`✅ Catálogo 100% oficial de Mercadona cargado: ${mercadonaCatalog.length} productos.`);
   }
 } catch (err) {
   console.error('Error cargando mercadona_catalog.json:', err);
@@ -50,7 +50,7 @@ function saveItems(items) {
   }
 }
 
-// Obtener IP local de la red Wi-Fi/LAN para conectar el móvil
+// Obtener IP local de la red
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
   const candidates = [];
@@ -90,14 +90,13 @@ function normalizeSearchQuery(q) {
   return s.trim();
 }
 
-// Buscar en el catálogo oficial de Mercadona (con soporte de limpieza, higiene y sin acentos)
+// Buscar exclusivamente en el catálogo oficial de Mercadona
 function searchMercadona(query) {
   const normalized = normalizeSearchQuery(query);
   const words = normalized.split(/\s+/).filter(w => w.length > 1);
 
   if (words.length === 0) return [];
 
-  // Filtrar productos donde el nombre normalizado contenga todas las palabras clave
   const matches = mercadonaCatalog.filter(p => {
     const pNorm = removeAccents(p.name);
     return words.every(w => pNorm.includes(w));
@@ -110,12 +109,14 @@ function searchMercadona(query) {
     else if (p.name.includes('Deliplus')) brand = 'Deliplus 🧴';
 
     return {
+      id: p.id,
       name: p.name,
       brand,
       price: p.price,
       packaging: p.packaging,
       image: p.image,
-      thumbnail: p.thumbnail
+      thumbnail: p.thumbnail,
+      mercadonaUrl: `https://tienda.mercadona.es/product/${p.id}/`
     };
   });
 }
@@ -128,22 +129,28 @@ app.get('/api/items', (req, res) => {
   res.json({ success: true, count: items.length, data: items });
 });
 
-// 2. Añadir un producto nuevo (Mercadona o Tienda local / Carnicería)
+// 2. Añadir un producto nuevo (Exclusivamente de Mercadona)
 app.post('/api/items', (req, res) => {
-  const { name, note, addedBy, category, price, packaging, store, quantity, customIcon } = req.body;
-  let { imageUrl } = req.body;
+  let { name, note, addedBy, price, packaging, imageUrl } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, error: 'El nombre del producto es obligatorio.' });
   }
 
-  const isLocalStore = Boolean(store && store !== 'Mercadona');
-
-  // Si es de Mercadona y no tiene foto, buscamos en el catálogo oficial
-  if (!isLocalStore && !imageUrl) {
+  // Si no viene con foto oficial de Mercadona, lo buscamos en el catálogo oficial
+  if (!imageUrl) {
     const mercaMatches = searchMercadona(name);
     if (mercaMatches.length > 0) {
-      imageUrl = mercaMatches[0].image;
+      const match = mercaMatches[0];
+      name = match.name;
+      price = match.price;
+      packaging = match.packaging;
+      imageUrl = match.image;
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Este producto no existe en el catálogo oficial de Mercadona (tienda.mercadona.es). Por favor, selecciona una sugerencia del buscador.' 
+      });
     }
   }
 
@@ -153,10 +160,7 @@ app.post('/api/items', (req, res) => {
     name: name.trim(),
     note: (note || '').trim(),
     addedBy: addedBy || 'Familia 🏠',
-    category: category || (isLocalStore ? store : 'Mercadona'),
-    store: store || 'Mercadona',
-    quantity: (quantity || '').trim(),
-    customIcon: customIcon || (isLocalStore ? '🏪' : ''),
+    category: 'Mercadona',
     price: price || '',
     packaging: packaging || '',
     bought: false,
@@ -212,7 +216,7 @@ app.post('/api/items/clear-bought', (req, res) => {
   res.json({ success: true, message: 'Productos comprados limpiados con éxito.' });
 });
 
-// 6. Información de red para conectar el móvil (con Subdominio Oficial de Render)
+// 6. Información de red
 app.get('/api/network-info', (req, res) => {
   const ip = getLocalIp();
   res.json({
@@ -240,8 +244,7 @@ app.get('/api/search-products', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   const ip = getLocalIp();
   console.log(`\n======================================================`);
-  console.log(`🛒 SERVIDOR DESPENSA FAMILIAR INICIADO (MERCADONA OFICIAL)`);
-  console.log(`💻 Acceso en este PC:      http://localhost:${PORT}`);
-  console.log(`📱 Acceso desde el MÓVIL:  http://${ip}:${PORT}`);
+  console.log(`🛒 SERVIDOR DESPENSA FAMILIAR 100% MERCADONA`);
+  console.log(`💻 Catálogo: https://tienda.mercadona.es/`);
   console.log(`======================================================\n`);
 });

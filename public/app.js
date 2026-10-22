@@ -1,13 +1,8 @@
 // Estado de la aplicación
 let allItems = [];
 let currentFilter = 'pending';
-let currentStoreFilter = 'all'; // 'all', 'Mercadona', 'local'
 let selectedProductData = null;
 let searchDebounceTimeout = null;
-
-// Estado del formulario de tienda local
-let selectedStoreType = 'Carnicería';
-let selectedStoreIcon = '🥩';
 
 // Elementos del DOM
 const itemsList = document.getElementById('itemsList');
@@ -19,11 +14,9 @@ const suggestionsBox = document.getElementById('suggestionsBox');
 const userSelector = document.getElementById('userSelector');
 const voiceBtn = document.getElementById('voiceBtn');
 const voiceBtnText = document.getElementById('voiceBtnText');
-const mobileUrlDisplay = document.getElementById('mobileUrlDisplay');
 const pendingCountSpan = document.getElementById('pendingCount');
 const boughtCountSpan = document.getElementById('boughtCount');
 const pendingCostDisplay = document.getElementById('pendingCostDisplay');
-const extraStoresNote = document.getElementById('extraStoresNote');
 const totalItemsBadge = document.getElementById('totalItemsBadge');
 
 // 1. Inicialización
@@ -37,9 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('familyUser', e.target.value);
   });
 
-  fetchNetworkInfo();
   fetchItems();
-
   setInterval(fetchItems, 3500);
 
   addBtn.addEventListener('click', handleAddItem);
@@ -75,7 +66,7 @@ async function fetchItems() {
   }
 }
 
-// 3. Renderizar la lista con componentes Bootstrap 5
+// 3. Renderizar la lista 100% Mercadona
 function renderItems() {
   const pendingItems = allItems.filter(i => !i.bought);
   const boughtItems = allItems.filter(i => i.bought);
@@ -83,29 +74,17 @@ function renderItems() {
   pendingCountSpan.textContent = pendingItems.length;
   boughtCountSpan.textContent = boughtItems.length;
 
-  // Cálculo del Coste Total Estimado
+  // Cálculo del Coste Total de Mercadona
   let totalCost = 0;
-  let unpricedLocalCount = 0;
-
   pendingItems.forEach(item => {
     if (item.price) {
       const num = parseFloat(item.price.replace('€', '').replace(',', '.').trim());
       if (!isNaN(num)) totalCost += num;
-    } else {
-      unpricedLocalCount++;
     }
   });
 
   if (pendingCostDisplay) {
     pendingCostDisplay.textContent = totalCost.toFixed(2) + ' €';
-  }
-  if (extraStoresNote) {
-    if (unpricedLocalCount > 0) {
-      extraStoresNote.textContent = `(+ ${unpricedLocalCount} en carnicería/locales)`;
-      extraStoresNote.classList.remove('d-none');
-    } else {
-      extraStoresNote.classList.add('d-none');
-    }
   }
   if (totalItemsBadge) {
     totalItemsBadge.textContent = `${pendingItems.length} pendientes`;
@@ -115,12 +94,6 @@ function renderItems() {
   if (currentFilter === 'pending') visibleItems = pendingItems;
   if (currentFilter === 'bought') visibleItems = boughtItems;
 
-  if (currentStoreFilter === 'Mercadona') {
-    visibleItems = visibleItems.filter(i => (!i.store || i.store === 'Mercadona'));
-  } else if (currentStoreFilter === 'local') {
-    visibleItems = visibleItems.filter(i => (i.store && i.store !== 'Mercadona'));
-  }
-
   if (visibleItems.length === 0) {
     itemsList.innerHTML = '';
     emptyState.classList.remove('d-none');
@@ -128,118 +101,92 @@ function renderItems() {
   }
 
   emptyState.classList.add('d-none');
-  itemsList.innerHTML = visibleItems.map(item => {
-    const isLocal = item.store && item.store !== 'Mercadona';
-    const storeIcon = item.customIcon || (isLocal ? '🏪' : '🛒');
-
-    return `
-      <div class="card border-0 shadow-sm rounded-4 p-3 product-card ${item.bought ? 'bg-light opacity-50' : 'bg-white'}">
-        <div class="d-flex align-items-center gap-3">
-          
-          <!-- FOTO OFICIAL GRANDE O ICONO DE TIENDA -->
-          <div 
-            onclick="${item.imageUrl ? `openImageModal('${escapeQuotes(item.name)}', '${escapeQuotes(item.imageUrl)}', '${escapeQuotes(item.price || '')}')` : ''}" 
-            class="position-relative flex-shrink-0 ${item.imageUrl ? 'cursor-pointer' : ''}" 
-            title="${item.imageUrl ? 'Toca para ver la foto en grande' : item.store}"
+  itemsList.innerHTML = visibleItems.map(item => `
+    <div class="card border-0 shadow-sm rounded-4 p-3 product-card ${item.bought ? 'bg-light opacity-50' : 'bg-white'}">
+      <div class="d-flex align-items-center gap-3">
+        
+        <!-- FOTO OFICIAL MERCADONA (prod-mercadona.imgix.net) -->
+        <div 
+          onclick="openImageModal('${escapeQuotes(item.name)}', '${escapeQuotes(item.imageUrl || '')}', '${escapeQuotes(item.price || '')}')" 
+          class="position-relative flex-shrink-0 cursor-pointer" 
+          title="Toca para ver la foto oficial en grande"
+        >
+          <img 
+            src="${item.imageUrl || 'https://prod-mercadona.imgix.net/images/048866170d10f274cb3be9f395f5be94.jpg?fit=crop&h=300&w=300'}" 
+            alt="${item.name}" 
+            class="rounded-3 border p-1 bg-white shadow-2xs" 
+            style="width: 78px; height: 78px; object-fit: contain;"
+            loading="lazy"
           >
-            ${item.imageUrl ? `
-              <img 
-                src="${item.imageUrl}" 
-                alt="${item.name}" 
-                class="rounded-3 border p-1 bg-white shadow-2xs" 
-                style="width: 76px; height: 76px; object-fit: contain;"
-                loading="lazy"
-              >
-              <span class="badge bg-dark bg-opacity-75 position-absolute bottom-0 end-0 m-1" style="font-size: 0.6rem;">
-                🔍
-              </span>
-            ` : `
-              <div class="rounded-3 d-flex flex-column align-items-center justify-content-center shadow-2xs border ${isLocal ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-light text-muted'}" style="width: 76px; height: 76px;">
-                <span class="fs-3">${storeIcon}</span>
-                <span class="fw-bold text-uppercase text-truncate px-1" style="font-size: 0.6rem; max-width: 70px;">
-                  ${escapeHtml(item.store || 'Tienda')}
-                </span>
-              </div>
-            `}
+          <span class="badge bg-dark bg-opacity-75 position-absolute bottom-0 end-0 m-1" style="font-size: 0.6rem;">
+            🔍
+          </span>
+        </div>
+
+        <!-- Detalles del Producto Oficial -->
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-start justify-content-between gap-1">
+            <h5 class="h6 mb-0 fw-bold text-dark text-truncate ${item.bought ? 'text-decoration-line-through text-muted' : ''}">
+              ${escapeHtml(item.name)}
+            </h5>
+            
+            <button 
+              onclick="deleteItem('${item.id}')" 
+              class="btn btn-link btn-sm text-secondary p-0 text-decoration-none" 
+              title="Eliminar de la lista"
+            >
+              <i class="bi bi-x-lg" style="font-size: 0.8rem;"></i>
+            </button>
           </div>
 
-          <!-- Detalles del Producto -->
-          <div class="flex-grow-1 min-w-0">
-            <div class="d-flex align-items-start justify-content-between gap-1">
-              <h5 class="h6 mb-0 fw-bold text-dark text-truncate ${item.bought ? 'text-decoration-line-through text-muted' : ''}">
-                ${escapeHtml(item.name)}
-              </h5>
-              
-              <button 
-                onclick="deleteItem('${item.id}')" 
-                class="btn btn-link btn-sm text-secondary p-0 text-decoration-none" 
-                title="Eliminar"
-              >
-                <i class="bi bi-x-lg" style="font-size: 0.8rem;"></i>
-              </button>
-            </div>
+          <!-- Badges Oficiales de Mercadona: Precio y Envase -->
+          <div class="d-flex align-items-center gap-1.5 mt-1 flex-wrap">
+            <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size: 0.68rem;">
+              🟢 Mercadona
+            </span>
 
-            <!-- Etiquetas de Precio, Envase y Tienda -->
-            <div class="d-flex align-items-center gap-1.5 mt-1 flex-wrap">
-              ${isLocal ? `
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold" style="font-size: 0.7rem;">
-                  ${storeIcon} ${escapeHtml(item.store)}
-                </span>
-              ` : `
-                <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size: 0.68rem;">
-                  🟢 Mercadona
-                </span>
-              `}
-
-              ${item.quantity ? `
-                <span class="badge bg-secondary-subtle text-secondary-emphasis fw-bold" style="font-size: 0.7rem;">
-                  ⚖️ ${escapeHtml(item.quantity)}
-                </span>
-              ` : ''}
-
-              ${item.price ? `
-                <span class="badge bg-success text-white fw-bold" style="font-size: 0.72rem;">
-                  ${escapeHtml(item.price)}
-                </span>
-              ` : ''}
-
-              ${item.packaging ? `
-                <span class="badge bg-light text-dark border" style="font-size: 0.68rem;">
-                  ${escapeHtml(item.packaging)}
-                </span>
-              ` : ''}
-            </div>
-
-            <!-- Nota o Encargo Especial -->
-            ${item.note ? `
-              <div class="mt-1">
-                <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-wrap text-start fw-normal" style="font-size: 0.72rem;">
-                  💬 ${escapeHtml(item.note)}
-                </span>
-              </div>
+            ${item.price ? `
+              <span class="badge bg-success text-white fw-bold" style="font-size: 0.75rem;">
+                ${escapeHtml(item.price)}
+              </span>
             ` : ''}
 
-            <!-- Pie de tarjeta: Quién lo pidió y botón de tachar -->
-            <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top border-light-subtle">
-              <small class="text-muted fw-semibold" style="font-size: 0.7rem;">
-                <i class="bi bi-person"></i> ${escapeHtml(item.addedBy)}
-              </small>
+            ${item.packaging ? `
+              <span class="badge bg-light text-dark border" style="font-size: 0.68rem;">
+                ${escapeHtml(item.packaging)}
+              </span>
+            ` : ''}
+          </div>
 
-              <button 
-                onclick="toggleItem('${item.id}', ${!item.bought})" 
-                class="btn btn-sm py-1 px-3 rounded-pill fw-bold checkbox-touch ${item.bought ? 'btn-success text-white shadow-2xs' : 'btn-outline-secondary'}"
-                style="font-size: 0.75rem;"
-              >
-                ${item.bought ? '<i class="bi bi-check-circle-fill"></i> Comprado' : '<i class="bi bi-circle"></i> Tachar'}
-              </button>
+          <!-- Nota o Encargo Especial de la familia -->
+          ${item.note ? `
+            <div class="mt-1">
+              <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-wrap text-start fw-normal" style="font-size: 0.72rem;">
+                💬 ${escapeHtml(item.note)}
+              </span>
             </div>
+          ` : ''}
 
+          <!-- Pie de tarjeta: Quién lo pidió y botón de tachar -->
+          <div class="d-flex align-items-center justify-content-between mt-2 pt-1 border-top border-light-subtle">
+            <small class="text-muted fw-semibold" style="font-size: 0.7rem;">
+              <i class="bi bi-person"></i> ${escapeHtml(item.addedBy)}
+            </small>
+
+            <button 
+              onclick="toggleItem('${item.id}', ${!item.bought})" 
+              class="btn btn-sm py-1 px-3 rounded-pill fw-bold checkbox-touch ${item.bought ? 'btn-success text-white shadow-2xs' : 'btn-outline-secondary'}"
+              style="font-size: 0.75rem;"
+            >
+              ${item.bought ? '<i class="bi bi-check-circle-fill"></i> Comprado' : '<i class="bi bi-circle"></i> Tachar'}
+            </button>
           </div>
 
         </div>
+
       </div>
-    `;
-  }).join('');
+    </div>
+  `).join('');
 }
 
 // 4. Añadir Producto de Mercadona
@@ -257,7 +204,6 @@ async function handleAddItem() {
     name: selectedProductData ? selectedProductData.name : name,
     note,
     addedBy,
-    store: 'Mercadona',
     price: selectedProductData ? selectedProductData.price : '',
     packaging: selectedProductData ? selectedProductData.packaging : '',
     imageUrl: selectedProductData ? selectedProductData.image : ''
@@ -278,107 +224,15 @@ async function handleAddItem() {
       suggestionsBox.classList.add('d-none');
       productInput.focus();
       await fetchItems();
+    } else {
+      alert(data.error || 'Por favor, selecciona un producto del catálogo de Mercadona.');
     }
   } catch (err) {
     alert('No se pudo conectar con el servidor.');
   }
 }
 
-// 5. Modal de Tienda Local
-function openLocalStoreModal() {
-  const modalEl = document.getElementById('localStoreModal');
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  modal.show();
-  setTimeout(() => document.getElementById('localProductName').focus(), 300);
-}
-
-function closeLocalStoreModal() {
-  const modalEl = document.getElementById('localStoreModal');
-  const modal = bootstrap.Modal.getInstance(modalEl);
-  if (modal) modal.hide();
-}
-
-function selectStoreType(name, icon) {
-  selectedStoreType = name;
-  selectedStoreIcon = icon;
-
-  const buttons = document.querySelectorAll('.store-type-btn');
-  buttons.forEach(btn => {
-    if (btn.textContent.includes(name)) {
-      btn.className = 'store-type-btn btn btn-outline-warning text-dark w-100 py-2 rounded-3 active fw-bold text-center';
-    } else {
-      btn.className = 'store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center';
-    }
-  });
-}
-
-async function handleLocalStoreSubmit(event) {
-  event.preventDefault();
-  const nameInput = document.getElementById('localProductName');
-  const qtyInput = document.getElementById('localProductQty');
-  const noteInputCustom = document.getElementById('localProductNote');
-
-  const name = nameInput.value.trim();
-  const quantity = qtyInput.value.trim();
-  const note = noteInputCustom.value.trim();
-  const addedBy = userSelector.value;
-
-  if (!name) return;
-
-  const payload = {
-    name,
-    quantity,
-    note,
-    store: selectedStoreType,
-    customIcon: selectedStoreIcon,
-    addedBy,
-    imageUrl: ''
-  };
-
-  try {
-    const res = await fetch('/api/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if (data.success) {
-      nameInput.value = '';
-      qtyInput.value = '';
-      noteInputCustom.value = '';
-      closeLocalStoreModal();
-      await fetchItems();
-    }
-  } catch (err) {
-    alert('No se pudo guardar el encargo.');
-  }
-}
-
-// 6. Filtro por Tienda
-function setStoreFilter(store) {
-  currentStoreFilter = store;
-
-  const btnAll = document.getElementById('storeFilterAll');
-  const btnMerca = document.getElementById('storeFilterMercadona');
-  const btnLocal = document.getElementById('storeFilterLocal');
-
-  btnAll.className = store === 'all' 
-    ? 'btn btn-sm btn-dark rounded-pill fw-bold px-3 text-nowrap' 
-    : 'btn btn-sm btn-outline-secondary rounded-pill fw-semibold px-3 text-nowrap';
-
-  btnMerca.className = store === 'Mercadona'
-    ? 'btn btn-sm btn-success rounded-pill fw-bold px-3 text-nowrap'
-    : 'btn btn-sm btn-outline-success rounded-pill fw-semibold px-3 text-nowrap';
-
-  btnLocal.className = store === 'local'
-    ? 'btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 text-nowrap'
-    : 'btn btn-sm btn-outline-warning text-dark rounded-pill fw-semibold px-3 text-nowrap';
-
-  renderItems();
-}
-
-// 7. Tachar con vibración háptica
+// 5. Tachar con vibración háptica
 async function toggleItem(id, bought) {
   if (navigator.vibrate) {
     try { navigator.vibrate(35); } catch (e) {}
@@ -396,7 +250,7 @@ async function toggleItem(id, bought) {
   }
 }
 
-// 8. Eliminar
+// 6. Eliminar
 async function deleteItem(id) {
   try {
     const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
@@ -406,7 +260,7 @@ async function deleteItem(id) {
   }
 }
 
-// 9. Limpiar comprados
+// 7. Limpiar comprados
 async function clearBoughtItems() {
   if (!confirm('¿Deseas quitar todos los productos marcados como comprados?')) return;
   try {
@@ -417,7 +271,7 @@ async function clearBoughtItems() {
   }
 }
 
-// 10. Búsqueda oficial Mercadona
+// 8. Búsqueda instantánea oficial en tienda.mercadona.es
 function handleProductSearch() {
   clearTimeout(searchDebounceTimeout);
   const q = productInput.value.trim();
@@ -439,12 +293,17 @@ function handleProductSearch() {
             onclick="selectSuggestion(${idx})" 
             class="p-2 border-bottom d-flex align-items-center gap-2.5 cursor-pointer suggestion-item hover-bg-light"
           >
-            <img src="${prod.thumbnail || prod.image}" class="rounded border p-1 bg-white flex-shrink-0" style="width: 50px; height: 50px; object-fit: contain;">
+            <img 
+              src="${prod.thumbnail || prod.image}" 
+              class="rounded border p-1 bg-white flex-shrink-0" 
+              style="width: 52px; height: 52px; object-fit: contain;"
+            >
             <div class="flex-grow-1 min-w-0">
               <p class="mb-0 small fw-bold text-dark text-truncate">${escapeHtml(prod.name)}</p>
               <div class="d-flex align-items-center gap-2 mt-0.5">
-                <span class="badge bg-success text-white fw-bold" style="font-size: 0.68rem;">${escapeHtml(prod.price || '')}</span>
+                <span class="badge bg-success text-white fw-bold" style="font-size: 0.7rem;">${escapeHtml(prod.price || '')}</span>
                 <small class="text-muted" style="font-size: 0.7rem;">${escapeHtml(prod.packaging || '')}</small>
+                <small class="text-secondary fw-semibold" style="font-size: 0.68rem;">${escapeHtml(prod.brand)}</small>
               </div>
             </div>
           </div>
@@ -458,7 +317,7 @@ function handleProductSearch() {
     } catch (err) {
       console.warn('Error en autocompletado:', err);
     }
-  }, 150);
+  }, 120);
 }
 
 function selectSuggestion(idx) {
@@ -471,7 +330,7 @@ function selectSuggestion(idx) {
   noteInput.focus();
 }
 
-// 11. Dictado por voz
+// 9. Dictado por voz
 function initVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -514,7 +373,7 @@ function initVoiceRecognition() {
   };
 }
 
-// 12. Modal Foto Grande (Bootstrap Modal)
+// 10. Modal Foto Grande Oficial Mercadona
 function openImageModal(name, imageUrl, price) {
   if (!imageUrl) return;
   const modalEl = document.getElementById('imageModal');
@@ -530,56 +389,38 @@ function openImageModal(name, imageUrl, price) {
   modal.show();
 }
 
-// 13. Compartir por WhatsApp (funciona con o sin productos)
+// 11. Compartir por WhatsApp (100% Mercadona)
 function shareOnWhatsApp() {
   const pendingItems = allItems.filter(i => !i.bought);
   const currentUser = userSelector ? userSelector.value : 'Mamá 🌸';
   
-  // URL real de la app (dinámica o fallback oficial de Render con guión)
   const appUrl = (window.location.origin && !window.location.origin.includes('localhost')) 
     ? window.location.origin 
     : 'https://familia-barbado.onrender.com';
     
   let text = '';
 
-  // CASO 1: La lista está vacía -> Mensaje para que la familia añada cosas antes de ir al súper
+  // CASO 1: La lista está vacía
   if (pendingItems.length === 0) {
-    text = `🛒 ¡Voy a ir a hacer la compra! 🏠\n\n` +
-           `La lista de la compra está vacía ahora mismo. Apuntad lo que os haga falta para que no se me olvide nada:\n\n` +
+    text = `🛒 *¡Familia, voy a ir a Mercadona!* 🟢\n\n` +
+           `La lista está vacía ahora mismo. Entrad desde el móvil y apuntad lo que queráis que traiga:\n\n` +
            `👉 ${appUrl}\n\n` +
-           `¡Avisadme antes de que salga!  Enviado por ${currentUser}`;
+           `_¡Avisadme antes de que pase por caja!_ ✨ [Enviado por ${currentUser}]`;
   } 
-  // CASO 2: La lista tiene productos -> Enviar lo que hay + enlace para añadir más cosas
+  // CASO 2: La lista tiene productos
   else {
-    const mercaItems = pendingItems.filter(i => !i.store || i.store === 'Mercadona');
-    const localItems = pendingItems.filter(i => i.store && i.store !== 'Mercadona');
+    text = `🛒 *Lista de la Compra Mercadona* 🟢\n\n`;
 
-    text = `🛒 *Lista de la Compra Familiar* 🏠\n\n`;
-
-    if (mercaItems.length > 0) {
-      text += `🟢 *MERCADONA:*\n`;
-      mercaItems.forEach(item => {
-        text += `• ${item.name}`;
-        if (item.price) text += ` (${item.price})`;
-        if (item.note) text += ` - _"${item.note}"_`;
-        text += ` [${item.addedBy}]\n`;
-      });
-      text += `\n`;
-    }
-
-    if (localItems.length > 0) {
-      text += `TIENDAS LOCALES:*\n`;
-      localItems.forEach(item => {
-        text += `• ${item.customIcon || '🏪'} *${item.store}:* ${item.name}`;
-        if (item.quantity) text += ` [${item.quantity}]`;
-        if (item.note) text += ` - _"${item.note}"_`;
-        text += ` [${item.addedBy}]\n`;
-      });
-      text += `\n`;
-    }
+    pendingItems.forEach(item => {
+      text += `• ${item.name}`;
+      if (item.price) text += ` (${item.price})`;
+      if (item.note) text += ` - _"${item.note}"_`;
+      text += ` [${item.addedBy}]\n`;
+    });
+    text += `\n`;
 
     let totalCost = 0;
-    mercaItems.forEach(i => {
+    pendingItems.forEach(i => {
       if (i.price) {
         const num = parseFloat(i.price.replace('€', '').replace(',', '.').trim());
         if (!isNaN(num)) totalCost += num;
@@ -587,16 +428,16 @@ function shareOnWhatsApp() {
     });
 
     if (totalCost > 0) {
-      text += `💶 *Total estimado Mercadona:* ~${totalCost.toFixed(2)} €\n\n`;
+      text += `💶 *Total estimado Mercadona:* ${totalCost.toFixed(2)} €\n\n`;
     }
 
-    text += `¿Os hace falta algo más? Apuntadlo aquí:\n👉 ${appUrl}\n\n`;
-    text += `[Enviado por ${currentUser}]`;
+    text += `¿Falta algo más? Apuntadlo aquí:\n👉 ${appUrl}\n\n`;
+    text += `_[Enviado por ${currentUser}]_`;
   }
 
-  // Enviar a WhatsApp
+  // Abrir WhatsApp
   if (navigator.share) {
-    navigator.share({ title: 'Despensa Familiar', text }).catch(() => {
+    navigator.share({ title: 'Lista Mercadona', text }).catch(() => {
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     });
   } else {
@@ -604,16 +445,7 @@ function shareOnWhatsApp() {
   }
 }
 
-// 14. Red Wi-Fi / Información de red
-async function fetchNetworkInfo() {
-  // Banner retirado para producción
-}
-
-function copyMobileUrl() {
-  // Banner retirado
-}
-
-// Filtros por Estado
+// 12. Filtros por Estado
 function setFilter(filter) {
   currentFilter = filter;
   const btnPending = document.getElementById('filterPending');

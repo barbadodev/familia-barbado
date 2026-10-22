@@ -1,1 +1,62 @@
-[]
+[
+  {
+    "id": "1",
+    "name": "Dentífrico Triple Acción Colgate menta intensa",
+    "note": "Que se nos gasta la pasta de dientes",
+    "addedBy": "Tata 🎀",
+    "category": "Mercadona",
+    "price": "1.95 €",
+    "packaging": "Tubo",
+    "bought": false,
+    "imageUrl": "https://prod-mercadona.imgix.net/images/97535c0930b03860b5b9cbaebd7fb546.jpg?fit=crop&h=600&w=600",
+    "createdAt": "2026-10-22T19:30:00.000Z"
+  },
+  {
+    "id": "2",
+    "name": "Detergente ropa jabón natural de Marsella Bosque Verde líquido",
+    "note": "El de la botella azul grande",
+    "addedBy": "Mamá 🌸",
+    "category": "Mercadona",
+    "price": "3.50 €",
+    "packaging": "Botella",
+    "bought": false,
+    "imageUrl": "https://prod-mercadona.imgix.net/images/102bbb82bf71a7846528e2d2daef4567.jpeg?fit=crop&h=600&w=600",
+    "createdAt": "2026-10-22T19:25:00.000Z"
+  },
+  {
+    "id": "3",
+    "name": "Filetes pechuga de pollo corte fino",
+    "note": "Para cenar a la plancha",
+    "addedBy": "Mamá 🌸",
+    "category": "Mercadona",
+    "price": "4.84 €",
+    "packaging": "Bandeja",
+    "bought": false,
+    "imageUrl": "https://prod-mercadona.imgix.net/images/c89d28c5929f14861da52e2508912e3d.jpg?fit=crop&h=600&w=600",
+    "createdAt": "2026-10-22T19:00:00.000Z"
+  },
+  {
+    "id": "4",
+    "name": "Cacao soluble instantáneo Nesquik",
+    "note": "El bote amarillo grande para el desayuno",
+    "addedBy": "Tete 🧢",
+    "category": "Mercadona",
+    "price": "4.05 €",
+    "packaging": "Bote",
+    "bought": false,
+    "imageUrl": "https://prod-mercadona.imgix.net/images/06273f58632b6178bc30831c642dc92b.jpg?fit=crop&h=600&w=600",
+    "createdAt": "2026-10-22T17:55:00.000Z"
+  },
+  {
+    "id": "5",
+    "name": "Leche entera Hacendado",
+    "note": "Pack de 6 si hay",
+    "addedBy": "Papá 🛠️",
+    "category": "Mercadona",
+    "price": "0.95 €",
+    "packaging": "Brik",
+    "bought": false,
+    "imageUrl": "https://prod-mercadona.imgix.net/images/048866170d10f274cb3be9f395f5be94.jpg?fit=crop&h=600&w=600",
+    "createdAt": "2026-10-22T17:00:00.000Z"
+  }
+]
