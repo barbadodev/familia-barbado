@@ -534,13 +534,19 @@ function openImageModal(name, imageUrl, price) {
 function shareOnWhatsApp() {
   const pendingItems = allItems.filter(i => !i.bought);
   const currentUser = userSelector ? userSelector.value : 'Mamá 🌸';
+  
+  // URL real de la app (dinámica o fallback oficial de Render con guión)
+  const appUrl = (window.location.origin && !window.location.origin.includes('localhost')) 
+    ? window.location.origin 
+    : 'https://familia-barbado.onrender.com';
+    
   let text = '';
 
   // CASO 1: La lista está vacía -> Mensaje para que la familia añada cosas antes de ir al súper
   if (pendingItems.length === 0) {
     text = `🛒 *¡Familia, voy a ir a hacer la compra!* 🏠\n\n` +
            `La lista de la compra está vacía ahora mismo. Entrad desde el móvil y apuntad lo que os haga falta (de Mercadona o de la carnicería) para que no se me olvide nada:\n\n` +
-           `👉 https://familiabarbado.onrender.com\n\n` +
+           `👉 ${appUrl}\n\n` +
            `_¡Avisadme antes de que salga!_ ✨ [Enviado por ${currentUser}]`;
   } 
   // CASO 2: La lista tiene productos -> Enviar lo que hay + enlace para añadir más cosas
@@ -584,7 +590,7 @@ function shareOnWhatsApp() {
       text += `💶 *Total estimado Mercadona:* ~${totalCost.toFixed(2)} €\n\n`;
     }
 
-    text += `¿Os hace falta algo más? Apuntadlo aquí:\n👉 https://familiabarbado.onrender.com\n\n`;
+    text += `¿Os hace falta algo más? Apuntadlo aquí:\n👉 ${appUrl}\n\n`;
     text += `_[Enviado por ${currentUser}]_`;
   }
 

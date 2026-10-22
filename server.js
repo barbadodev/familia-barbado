@@ -212,14 +212,14 @@ app.post('/api/items/clear-bought', (req, res) => {
   res.json({ success: true, message: 'Productos comprados limpiados con éxito.' });
 });
 
-// 6. Información de red para conectar el móvil (con Subdominio Familiar Gratuito)
+// 6. Información de red para conectar el móvil (con Subdominio Oficial de Render)
 app.get('/api/network-info', (req, res) => {
   const ip = getLocalIp();
   res.json({
     ip,
     port: PORT,
-    publicUrl: 'https://familiabarbado.loca.lt',
-    mobileUrl: 'https://familiabarbado.loca.lt',
+    publicUrl: 'https://familia-barbado.onrender.com',
+    mobileUrl: 'https://familia-barbado.onrender.com',
     localWifiUrl: `http://${ip}:${PORT}`
   });
 });
