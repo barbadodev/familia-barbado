@@ -530,58 +530,67 @@ function openImageModal(name, imageUrl, price) {
   modal.show();
 }
 
-// 13. Compartir por WhatsApp
+// 13. Compartir por WhatsApp (funciona con o sin productos)
 function shareOnWhatsApp() {
   const pendingItems = allItems.filter(i => !i.bought);
+  const currentUser = userSelector ? userSelector.value : 'Mamá 🌸';
+  let text = '';
 
+  // CASO 1: La lista está vacía -> Mensaje para que la familia añada cosas antes de ir al súper
   if (pendingItems.length === 0) {
-    alert('¡La lista está vacía o ya está todo comprado!');
-    return;
-  }
+    text = `🛒 *¡Familia, voy a ir a hacer la compra!* 🏠\n\n` +
+           `La lista de la compra está vacía ahora mismo. Entrad desde el móvil y apuntad lo que os haga falta (de Mercadona o de la carnicería) para que no se me olvide nada:\n\n` +
+           `👉 https://familiabarbado.onrender.com\n\n` +
+           `_¡Avisadme antes de que salga!_ ✨ [Enviado por ${currentUser}]`;
+  } 
+  // CASO 2: La lista tiene productos -> Enviar lo que hay + enlace para añadir más cosas
+  else {
+    const mercaItems = pendingItems.filter(i => !i.store || i.store === 'Mercadona');
+    const localItems = pendingItems.filter(i => i.store && i.store !== 'Mercadona');
 
-  const mercaItems = pendingItems.filter(i => !i.store || i.store === 'Mercadona');
-  const localItems = pendingItems.filter(i => i.store && i.store !== 'Mercadona');
+    text = `🛒 *Lista de la Compra Familiar* 🏠\n\n`;
 
-  let text = `🛒 *Lista de la Compra Familiar* 🏠\n\n`;
-
-  if (mercaItems.length > 0) {
-    text += `🟢 *MERCADONA:*\n`;
-    mercaItems.forEach(item => {
-      text += `• ${item.name}`;
-      if (item.price) text += ` (${item.price})`;
-      if (item.note) text += ` - _"${item.note}"_`;
-      text += ` [${item.addedBy}]\n`;
-    });
-    text += `\n`;
-  }
-
-  if (localItems.length > 0) {
-    text += `🥩 *CARNICERÍA Y TIENDAS LOCALES:*\n`;
-    localItems.forEach(item => {
-      text += `• ${item.customIcon || '🏪'} *${item.store}:* ${item.name}`;
-      if (item.quantity) text += ` [${item.quantity}]`;
-      if (item.note) text += ` - _"${item.note}"_`;
-      text += ` [${item.addedBy}]\n`;
-    });
-    text += `\n`;
-  }
-
-  let totalCost = 0;
-  mercaItems.forEach(i => {
-    if (i.price) {
-      const num = parseFloat(i.price.replace('€', '').replace(',', '.').trim());
-      if (!isNaN(num)) totalCost += num;
+    if (mercaItems.length > 0) {
+      text += `🟢 *MERCADONA:*\n`;
+      mercaItems.forEach(item => {
+        text += `• ${item.name}`;
+        if (item.price) text += ` (${item.price})`;
+        if (item.note) text += ` - _"${item.note}"_`;
+        text += ` [${item.addedBy}]\n`;
+      });
+      text += `\n`;
     }
-  });
 
-  if (totalCost > 0) {
-    text += `💶 *Total estimado Mercadona:* ~${totalCost.toFixed(2)} €\n\n`;
+    if (localItems.length > 0) {
+      text += `🥩 *CARNICERÍA Y TIENDAS LOCALES:*\n`;
+      localItems.forEach(item => {
+        text += `• ${item.customIcon || '🏪'} *${item.store}:* ${item.name}`;
+        if (item.quantity) text += ` [${item.quantity}]`;
+        if (item.note) text += ` - _"${item.note}"_`;
+        text += ` [${item.addedBy}]\n`;
+      });
+      text += `\n`;
+    }
+
+    let totalCost = 0;
+    mercaItems.forEach(i => {
+      if (i.price) {
+        const num = parseFloat(i.price.replace('€', '').replace(',', '.').trim());
+        if (!isNaN(num)) totalCost += num;
+      }
+    });
+
+    if (totalCost > 0) {
+      text += `💶 *Total estimado Mercadona:* ~${totalCost.toFixed(2)} €\n\n`;
+    }
+
+    text += `¿Os hace falta algo más? Apuntadlo aquí:\n👉 https://familiabarbado.onrender.com\n\n`;
+    text += `_[Enviado por ${currentUser}]_`;
   }
 
-  text += `_Generado con Despensa Familiar (2º DAW)_`;
-
+  // Enviar a WhatsApp
   if (navigator.share) {
-    navigator.share({ title: 'Lista de la Compra', text }).catch(() => {
+    navigator.share({ title: 'Despensa Familiar', text }).catch(() => {
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     });
   } else {
