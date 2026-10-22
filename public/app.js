@@ -589,22 +589,13 @@ function shareOnWhatsApp() {
   }
 }
 
-// 14. Red Wi-Fi
+// 14. Red Wi-Fi / Información de red
 async function fetchNetworkInfo() {
-  try {
-    const res = await fetch('/api/network-info');
-    const data = await res.json();
-    mobileUrlDisplay.textContent = data.mobileUrl;
-  } catch {
-    mobileUrlDisplay.textContent = 'http://localhost:3000';
-  }
+  // Banner retirado para producción
 }
 
 function copyMobileUrl() {
-  const url = mobileUrlDisplay.textContent;
-  navigator.clipboard.writeText(url).then(() => {
-    alert(`Enlace copiado al portapapeles:\n${url}`);
-  });
+  // Banner retirado
 }
 
 // Filtros por Estado
