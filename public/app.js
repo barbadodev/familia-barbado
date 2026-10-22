@@ -544,10 +544,10 @@ function shareOnWhatsApp() {
 
   // CASO 1: La lista está vacía -> Mensaje para que la familia añada cosas antes de ir al súper
   if (pendingItems.length === 0) {
-    text = `🛒 *¡Familia, voy a ir a hacer la compra!* 🏠\n\n` +
-           `La lista de la compra está vacía ahora mismo. Entrad desde el móvil y apuntad lo que os haga falta (de Mercadona o de la carnicería) para que no se me olvide nada:\n\n` +
+    text = `🛒 ¡Voy a ir a hacer la compra! 🏠\n\n` +
+           `La lista de la compra está vacía ahora mismo. Apuntad lo que os haga falta para que no se me olvide nada:\n\n` +
            `👉 ${appUrl}\n\n` +
-           `_¡Avisadme antes de que salga!_ ✨ [Enviado por ${currentUser}]`;
+           `¡Avisadme antes de que salga!  Enviado por ${currentUser}`;
   } 
   // CASO 2: La lista tiene productos -> Enviar lo que hay + enlace para añadir más cosas
   else {
@@ -568,7 +568,7 @@ function shareOnWhatsApp() {
     }
 
     if (localItems.length > 0) {
-      text += `🥩 *CARNICERÍA Y TIENDAS LOCALES:*\n`;
+      text += `TIENDAS LOCALES:*\n`;
       localItems.forEach(item => {
         text += `• ${item.customIcon || '🏪'} *${item.store}:* ${item.name}`;
         if (item.quantity) text += ` [${item.quantity}]`;
@@ -591,7 +591,7 @@ function shareOnWhatsApp() {
     }
 
     text += `¿Os hace falta algo más? Apuntadlo aquí:\n👉 ${appUrl}\n\n`;
-    text += `_[Enviado por ${currentUser}]_`;
+    text += `[Enviado por ${currentUser}]`;
   }
 
   // Enviar a WhatsApp
