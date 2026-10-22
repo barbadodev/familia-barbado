@@ -1,0 +1,71 @@
+/* Tipografía moderna */
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Colores corporativos Mercadona */
+.bg-mercadona {
+  background-color: #00875a !important;
+}
+
+.bg-gradient-mercadona {
+  background: linear-gradient(135deg, #00875a 0%, #015f40 100%) !important;
+}
+
+.text-mercadona {
+  color: #00875a !important;
+}
+
+/* Ocultar barra de scroll en carruseles horizontales pero permitir deslizamiento */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Sombras suaves modernas */
+.shadow-xs {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Animación de escucha para el micro */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+.listening {
+  background-color: #fee2e2 !important;
+  color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  animation: pulse-ring 1.5s infinite;
+}
+
+/* Tarjetas de productos */
+.product-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.product-card:active {
+  transform: scale(0.99);
+}
+
+.checkbox-touch {
+  transition: all 0.15s ease-in-out;
+}
+.checkbox-touch:active {
+  transform: scale(0.92);
+}
