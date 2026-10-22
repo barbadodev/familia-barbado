@@ -129,28 +129,24 @@ app.get('/api/items', (req, res) => {
   res.json({ success: true, count: items.length, data: items });
 });
 
-// 2. Añadir un producto nuevo (Exclusivamente de Mercadona)
+// 2. Añadir un producto nuevo (Mercadona o Tienda local / Carnicería)
 app.post('/api/items', (req, res) => {
-  let { name, note, addedBy, price, packaging, imageUrl } = req.body;
+  const { name, note, addedBy, category, price, packaging, store, quantity, customIcon } = req.body;
+  let { imageUrl } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, error: 'El nombre del producto es obligatorio.' });
   }
 
-  // Si no viene con foto oficial de Mercadona, lo buscamos en el catálogo oficial
-  if (!imageUrl) {
+  const isLocalStore = Boolean(store && store !== 'Mercadona');
+
+  // Si es de Mercadona y no tiene foto, buscamos en el catálogo oficial
+  if (!isLocalStore && !imageUrl) {
     const mercaMatches = searchMercadona(name);
     if (mercaMatches.length > 0) {
-      const match = mercaMatches[0];
-      name = match.name;
-      price = match.price;
-      packaging = match.packaging;
-      imageUrl = match.image;
-    } else {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Este producto no existe en el catálogo oficial de Mercadona (tienda.mercadona.es). Por favor, selecciona una sugerencia del buscador.' 
-      });
+      imageUrl = mercaMatches[0].image;
+      if (!price) price = mercaMatches[0].price;
+      if (!packaging) packaging = mercaMatches[0].packaging;
     }
   }
 
@@ -160,7 +156,10 @@ app.post('/api/items', (req, res) => {
     name: name.trim(),
     note: (note || '').trim(),
     addedBy: addedBy || 'Familia 🏠',
-    category: 'Mercadona',
+    category: category || (isLocalStore ? store : 'Mercadona'),
+    store: store || 'Mercadona',
+    quantity: (quantity || '').trim(),
+    customIcon: customIcon || (isLocalStore ? '🏪' : ''),
     price: price || '',
     packaging: packaging || '',
     bought: false,

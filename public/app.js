@@ -1,8 +1,13 @@
 // Estado de la aplicación
 let allItems = [];
 let currentFilter = 'pending';
+let currentStoreFilter = 'all'; // 'all', 'Mercadona', 'local'
 let selectedProductData = null;
 let searchDebounceTimeout = null;
+
+// Estado del formulario de tienda local
+let selectedStoreType = 'Carnicería';
+let selectedStoreIcon = '🥩';
 
 // Elementos del DOM
 const itemsList = document.getElementById('itemsList');
@@ -82,7 +87,7 @@ function cleanMercadonaName(raw) {
     if (/marsella/i.test(name)) return 'Detergente Marsella';
     if (/blanca/i.test(name)) return 'Detergente ropa blanca y color';
     if (/bebe/i.test(name)) return 'Detergente hipoalergénico bebé';
-    return 'Detergente para la ropa';
+    return 'Detergente ropa';
   }
   if (/friegasuelos/i.test(name)) {
     if (/pino/i.test(name)) return 'Friegasuelos de pino';
@@ -133,18 +138,16 @@ function cleanMercadonaName(raw) {
     return 'Café';
   }
 
-  // Limpieza genérica: quitar marcas y palabras técnicas redundantes
   let simplified = name
     .replace(/\b(Hacendado|Bosque Verde|Deliplus)\b/gi, '')
     .replace(/\b(líquido|polvo|concentrado|frescos|fresco|natural|instantáneo)\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Si queda demasiado corto o vacío, devolvemos el original
   return simplified.length >= 3 ? simplified : name;
 }
 
-// 3. Renderizar la lista 100% Mercadona
+// 3. Renderizar la lista
 function renderItems() {
   const pendingItems = allItems.filter(i => !i.bought);
   const boughtItems = allItems.filter(i => i.bought);
@@ -152,17 +155,21 @@ function renderItems() {
   pendingCountSpan.textContent = pendingItems.length;
   boughtCountSpan.textContent = boughtItems.length;
 
-  // Cálculo del Coste Total de Mercadona
+  // Cálculo del Coste Total
   let totalCost = 0;
+  let unpricedCount = 0;
+
   pendingItems.forEach(item => {
     if (item.price) {
       const num = parseFloat(item.price.replace('€', '').replace(',', '.').trim());
       if (!isNaN(num)) totalCost += num;
+    } else {
+      unpricedCount++;
     }
   });
 
   if (pendingCostDisplay) {
-    pendingCostDisplay.textContent = totalCost.toFixed(2) + ' €';
+    pendingCostDisplay.textContent = totalCost.toFixed(2) + ' €' + (unpricedCount > 0 ? ` (+ ${unpricedCount} en carnicería/locales)` : '');
   }
   if (totalItemsBadge) {
     totalItemsBadge.textContent = `${pendingItems.length} pendientes`;
@@ -172,6 +179,13 @@ function renderItems() {
   if (currentFilter === 'pending') visibleItems = pendingItems;
   if (currentFilter === 'bought') visibleItems = boughtItems;
 
+  // Filtro por Tienda
+  if (currentStoreFilter === 'Mercadona') {
+    visibleItems = visibleItems.filter(i => (!i.store || i.store === 'Mercadona'));
+  } else if (currentStoreFilter === 'local') {
+    visibleItems = visibleItems.filter(i => (i.store && i.store !== 'Mercadona'));
+  }
+
   if (visibleItems.length === 0) {
     itemsList.innerHTML = '';
     emptyState.classList.remove('d-none');
@@ -180,29 +194,40 @@ function renderItems() {
 
   emptyState.classList.add('d-none');
   itemsList.innerHTML = visibleItems.map(item => {
-    const friendlyName = cleanMercadonaName(item.name);
-    const showOriginal = friendlyName.toLowerCase() !== item.name.toLowerCase();
+    const isLocal = item.store && item.store !== 'Mercadona';
+    const storeIcon = item.customIcon || (isLocal ? '🏪' : '🛒');
+    const friendlyName = isLocal ? item.name : cleanMercadonaName(item.name);
+    const showOriginal = !isLocal && friendlyName.toLowerCase() !== item.name.toLowerCase();
 
     return `
       <div class="card border-0 shadow-sm rounded-4 p-3 product-card ${item.bought ? 'bg-light opacity-50' : 'bg-white'}">
         <div class="d-flex align-items-center gap-3">
           
-          <!-- FOTO OFICIAL MERCADONA -->
+          <!-- FOTO OFICIAL MERCADONA O ICONO DE CARNICERÍA / TIENDA -->
           <div 
-            onclick="openImageModal('${escapeQuotes(friendlyName)}', '${escapeQuotes(item.imageUrl || '')}', '${escapeQuotes(item.price || '')}')" 
-            class="position-relative flex-shrink-0 cursor-pointer" 
-            title="Toca para ver la foto oficial en grande"
+            onclick="${item.imageUrl ? `openImageModal('${escapeQuotes(friendlyName)}', '${escapeQuotes(item.imageUrl || '')}', '${escapeQuotes(item.price || '')}')` : ''}" 
+            class="position-relative flex-shrink-0 ${item.imageUrl ? 'cursor-pointer' : ''}" 
+            title="${item.imageUrl ? 'Toca para ver la foto en grande' : item.store}"
           >
-            <img 
-              src="${item.imageUrl || 'https://prod-mercadona.imgix.net/images/048866170d10f274cb3be9f395f5be94.jpg?fit=crop&h=300&w=300'}" 
-              alt="${item.name}" 
-              class="rounded-3 border p-1 bg-white shadow-2xs" 
-              style="width: 78px; height: 78px; object-fit: contain;"
-              loading="lazy"
-            >
-            <span class="badge bg-dark bg-opacity-75 position-absolute bottom-0 end-0 m-1" style="font-size: 0.6rem;">
-              🔍
-            </span>
+            ${item.imageUrl ? `
+              <img 
+                src="${item.imageUrl}" 
+                alt="${item.name}" 
+                class="rounded-3 border p-1 bg-white shadow-2xs" 
+                style="width: 78px; height: 78px; object-fit: contain;"
+                loading="lazy"
+              >
+              <span class="badge bg-dark bg-opacity-75 position-absolute bottom-0 end-0 m-1" style="font-size: 0.6rem;">
+                🔍
+              </span>
+            ` : `
+              <div class="rounded-3 d-flex flex-column align-items-center justify-content-center shadow-2xs border ${isLocal ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-light text-muted'}" style="width: 78px; height: 78px;">
+                <span class="fs-3">${storeIcon}</span>
+                <span class="fw-bold text-uppercase text-truncate px-1" style="font-size: 0.6rem; max-width: 70px;">
+                  ${escapeHtml(item.store || 'Tienda')}
+                </span>
+              </div>
+            `}
           </div>
 
           <!-- Detalles del Producto: Nombre intuitivo primero -->
@@ -228,8 +253,24 @@ function renderItems() {
               </button>
             </div>
 
-            <!-- Badges de Precio y Envase -->
+            <!-- Badges de Tienda, Cantidad, Precio y Envase -->
             <div class="d-flex align-items-center gap-1.5 mt-1.5 flex-wrap">
+              ${isLocal ? `
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold" style="font-size: 0.7rem;">
+                  ${storeIcon} ${escapeHtml(item.store)}
+                </span>
+              ` : `
+                <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold" style="font-size: 0.68rem;">
+                  🟢 Mercadona
+                </span>
+              `}
+
+              ${item.quantity ? `
+                <span class="badge bg-secondary-subtle text-secondary-emphasis fw-bold" style="font-size: 0.7rem;">
+                  ⚖️ ${escapeHtml(item.quantity)}
+                </span>
+              ` : ''}
+
               ${item.price ? `
                 <span class="badge bg-success text-white fw-bold" style="font-size: 0.72rem;">
                   ${escapeHtml(item.price)}
@@ -290,6 +331,7 @@ async function handleAddItem() {
     name: selectedProductData ? selectedProductData.name : name,
     note,
     addedBy,
+    store: 'Mercadona',
     price: selectedProductData ? selectedProductData.price : '',
     packaging: selectedProductData ? selectedProductData.packaging : '',
     imageUrl: selectedProductData ? selectedProductData.image : ''
@@ -311,14 +353,112 @@ async function handleAddItem() {
       productInput.focus();
       await fetchItems();
     } else {
-      alert(data.error || 'Por favor, selecciona un producto del catálogo de Mercadona.');
+      alert(data.error || 'No se pudo añadir.');
     }
   } catch (err) {
     alert('No se pudo conectar con el servidor.');
   }
 }
 
-// 5. Tachar con vibración háptica
+// 5. Modal de Tienda Local / Carnicería
+function openLocalStoreModal() {
+  const modalEl = document.getElementById('localStoreModal');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+  setTimeout(() => document.getElementById('localProductName').focus(), 300);
+}
+
+function closeLocalStoreModal() {
+  const modalEl = document.getElementById('localStoreModal');
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  if (modal) modal.hide();
+}
+
+function selectStoreType(name, icon) {
+  selectedStoreType = name;
+  selectedStoreIcon = icon;
+
+  const buttons = document.querySelectorAll('.store-type-btn');
+  buttons.forEach(btn => {
+    if (btn.textContent.includes(name)) {
+      btn.className = 'store-type-btn btn btn-outline-warning text-dark w-100 py-2 rounded-3 active fw-bold text-center';
+    } else {
+      btn.className = 'store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center';
+    }
+  });
+}
+
+async function handleLocalStoreSubmit(event) {
+  event.preventDefault();
+  const nameInput = document.getElementById('localProductName');
+  const qtyInput = document.getElementById('localProductQty');
+  const noteInputCustom = document.getElementById('localProductNote');
+
+  const name = nameInput.value.trim();
+  const quantity = qtyInput.value.trim();
+  const note = noteInputCustom.value.trim();
+  const addedBy = userSelector.value;
+
+  if (!name) return;
+
+  const payload = {
+    name,
+    quantity,
+    note,
+    store: selectedStoreType,
+    customIcon: selectedStoreIcon,
+    addedBy,
+    imageUrl: ''
+  };
+
+  try {
+    const res = await fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      nameInput.value = '';
+      qtyInput.value = '';
+      noteInputCustom.value = '';
+      closeLocalStoreModal();
+      await fetchItems();
+    }
+  } catch (err) {
+    alert('No se pudo guardar el encargo.');
+  }
+}
+
+// 6. Filtro por Tienda
+function setStoreFilter(store) {
+  currentStoreFilter = store;
+
+  const btnAll = document.getElementById('storeFilterAll');
+  const btnMerca = document.getElementById('storeFilterMercadona');
+  const btnLocal = document.getElementById('storeFilterLocal');
+
+  if (btnAll) {
+    btnAll.className = store === 'all' 
+      ? 'btn btn-sm btn-dark rounded-pill fw-bold px-3 text-nowrap' 
+      : 'btn btn-sm btn-outline-secondary rounded-pill fw-semibold px-3 text-nowrap';
+  }
+  if (btnMerca) {
+    btnMerca.className = store === 'Mercadona'
+      ? 'btn btn-sm btn-success rounded-pill fw-bold px-3 text-nowrap'
+      : 'btn btn-sm btn-outline-success rounded-pill fw-semibold px-3 text-nowrap';
+  }
+  if (btnLocal) {
+    btnLocal.className = store === 'local'
+      ? 'btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 text-nowrap'
+      : 'btn btn-sm btn-outline-warning text-dark rounded-pill fw-semibold px-3 text-nowrap';
+  }
+
+  renderItems();
+}
+
+// 7. Tachar con vibración háptica
 async function toggleItem(id, bought) {
   if (navigator.vibrate) {
     try { navigator.vibrate(35); } catch (e) {}
@@ -336,7 +476,7 @@ async function toggleItem(id, bought) {
   }
 }
 
-// 6. Eliminar
+// 8. Eliminar
 async function deleteItem(id) {
   try {
     const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
@@ -346,7 +486,7 @@ async function deleteItem(id) {
   }
 }
 
-// 7. Limpiar comprados
+// 9. Limpiar comprados
 async function clearBoughtItems() {
   if (!confirm('¿Deseas quitar todos los productos marcados como comprados?')) return;
   try {
@@ -357,7 +497,7 @@ async function clearBoughtItems() {
   }
 }
 
-// 8. Búsqueda instantánea oficial en tienda.mercadona.es
+// 10. Búsqueda oficial Mercadona
 function handleProductSearch() {
   clearTimeout(searchDebounceTimeout);
   const q = productInput.value.trim();
@@ -422,7 +562,7 @@ function selectSuggestion(idx) {
   noteInput.focus();
 }
 
-// 9. Dictado por voz
+// 11. Dictado por voz
 function initVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -465,7 +605,7 @@ function initVoiceRecognition() {
   };
 }
 
-// 10. Modal Foto Grande Oficial Mercadona
+// 12. Modal Foto Grande Oficial Mercadona
 function openImageModal(name, imageUrl, price) {
   if (!imageUrl) return;
   const modalEl = document.getElementById('imageModal');
@@ -481,7 +621,7 @@ function openImageModal(name, imageUrl, price) {
   modal.show();
 }
 
-// 11. Compartir por WhatsApp (100% Mercadona)
+// 13. Compartir por WhatsApp
 function shareOnWhatsApp() {
   const pendingItems = allItems.filter(i => !i.bought);
   const currentUser = userSelector ? userSelector.value : 'Mamá 🌸';
@@ -494,26 +634,43 @@ function shareOnWhatsApp() {
 
   // CASO 1: La lista está vacía
   if (pendingItems.length === 0) {
-    text = `🛒 *¡Familia, voy a ir a Mercadona!* 🟢\n\n` +
+    text = `🛒 *¡Familia, voy a ir a hacer la compra!* 🏠\n\n` +
            `La lista está vacía ahora mismo. Entrad desde el móvil y apuntad lo que queráis que traiga:\n\n` +
            `👉 ${appUrl}\n\n` +
-           `_¡Avisadme antes de que pase por caja!_ ✨ [Enviado por ${currentUser}]`;
+           `_¡Avisadme antes de que salga!_ ✨ [Enviado por ${currentUser}]`;
   } 
   // CASO 2: La lista tiene productos
   else {
-    text = `🛒 *Lista de la Compra Mercadona* 🟢\n\n`;
+    const mercaItems = pendingItems.filter(i => !i.store || i.store === 'Mercadona');
+    const localItems = pendingItems.filter(i => i.store && i.store !== 'Mercadona');
 
-    pendingItems.forEach(item => {
-      const friendly = cleanMercadonaName(item.name);
-      text += `• *${friendly}*`;
-      if (item.price) text += ` (${item.price})`;
-      if (item.note) text += ` - _"${item.note}"_`;
-      text += ` [${item.addedBy}]\n`;
-    });
-    text += `\n`;
+    text = `🛒 *Lista de la Compra Familiar* 🏠\n\n`;
+
+    if (mercaItems.length > 0) {
+      text += `🟢 *MERCADONA:*\n`;
+      mercaItems.forEach(item => {
+        const friendly = cleanMercadonaName(item.name);
+        text += `• *${friendly}*`;
+        if (item.price) text += ` (${item.price})`;
+        if (item.note) text += ` - _"${item.note}"_`;
+        text += ` [${item.addedBy}]\n`;
+      });
+      text += `\n`;
+    }
+
+    if (localItems.length > 0) {
+      text += `🥩 *CARNICERÍA Y TIENDAS LOCALES:*\n`;
+      localItems.forEach(item => {
+        text += `• ${item.customIcon || '🏪'} *${item.store}:* ${item.name}`;
+        if (item.quantity) text += ` [${item.quantity}]`;
+        if (item.note) text += ` - _"${item.note}"_`;
+        text += ` [${item.addedBy}]\n`;
+      });
+      text += `\n`;
+    }
 
     let totalCost = 0;
-    pendingItems.forEach(i => {
+    mercaItems.forEach(i => {
       if (i.price) {
         const num = parseFloat(i.price.replace('€', '').replace(',', '.').trim());
         if (!isNaN(num)) totalCost += num;
@@ -521,7 +678,7 @@ function shareOnWhatsApp() {
     });
 
     if (totalCost > 0) {
-      text += `💶 *Total estimado Mercadona:* ${totalCost.toFixed(2)} €\n\n`;
+      text += `💶 *Total estimado Mercadona:* ~${totalCost.toFixed(2)} €\n\n`;
     }
 
     text += `¿Falta algo más? Apuntadlo aquí:\n👉 ${appUrl}\n\n`;
@@ -530,7 +687,7 @@ function shareOnWhatsApp() {
 
   // Abrir WhatsApp
   if (navigator.share) {
-    navigator.share({ title: 'Lista Mercadona', text }).catch(() => {
+    navigator.share({ title: 'Lista de la Compra', text }).catch(() => {
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     });
   } else {
@@ -538,7 +695,7 @@ function shareOnWhatsApp() {
   }
 }
 
-// 12. Filtros por Estado
+// 14. Filtros por Estado
 function setFilter(filter) {
   currentFilter = filter;
   const btnPending = document.getElementById('filterPending');

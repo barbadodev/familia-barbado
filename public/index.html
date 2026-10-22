@@ -135,29 +135,58 @@
           <span>Añadir</span> <i class="bi bi-plus-lg"></i>
         </button>
       </div>
+
+      <!-- Botón para Carnicería / Tiendas Locales -->
+      <div class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top">
+        <small class="text-muted fw-semibold">¿Compra fuera del súper?</small>
+        <button 
+          type="button" 
+          onclick="openLocalStoreModal()" 
+          class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-pill px-3 py-1 shadow-xs"
+          title="Añadir encargo de carnicería, panadería, etc."
+        >
+          <span>🥩 🥖 🍎</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Filtros de Estado (Pendientes / Comprados) -->
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <div class="btn-group btn-group-sm bg-white p-1 rounded-pill shadow-xs border" role="group">
-        <button id="filterPending" onclick="setFilter('pending')" class="btn btn-sm btn-dark rounded-pill fw-bold px-3">
-          Pendientes (<span id="pendingCount">0</span>)
+    <!-- Filtros de Tienda y Estado -->
+    <div class="d-flex flex-column gap-2 mb-3">
+      <!-- Filtro por Tienda -->
+      <div class="d-flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+        <button id="storeFilterAll" onclick="setStoreFilter('all')" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 text-nowrap">
+          🏪 Todas las tiendas
         </button>
-        <button id="filterBought" onclick="setFilter('bought')" class="btn btn-sm text-secondary rounded-pill fw-semibold px-3">
-          Comprados (<span id="boughtCount">0</span>)
+        <button id="storeFilterMercadona" onclick="setStoreFilter('Mercadona')" class="btn btn-sm btn-outline-success rounded-pill fw-bold px-3 text-nowrap">
+          🟢 Solo Mercadona
         </button>
-        <button id="filterAll" onclick="setFilter('all')" class="btn btn-sm text-secondary rounded-pill fw-semibold px-3">
-          Todos
+        <button id="storeFilterLocal" onclick="setStoreFilter('local')" class="btn btn-sm btn-outline-warning text-dark rounded-pill fw-bold px-3 text-nowrap">
+          🥩
         </button>
       </div>
 
-      <button 
-        id="clearBoughtBtn" 
-        onclick="clearBoughtItems()" 
-        class="btn btn-link btn-sm text-danger text-decoration-none fw-semibold p-0"
-      >
-        Limpiar comprados
-      </button>
+      <!-- Filtro por Estado (Pendientes / Comprados) -->
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="btn-group btn-group-sm bg-white p-1 rounded-pill shadow-xs border" role="group">
+          <button id="filterPending" onclick="setFilter('pending')" class="btn btn-sm btn-dark rounded-pill fw-bold px-3">
+            Pendientes (<span id="pendingCount">0</span>)
+          </button>
+          <button id="filterBought" onclick="setFilter('bought')" class="btn btn-sm text-secondary rounded-pill fw-semibold px-3">
+            Comprados (<span id="boughtCount">0</span>)
+          </button>
+          <button id="filterAll" onclick="setFilter('all')" class="btn btn-sm text-secondary rounded-pill fw-semibold px-3">
+            Todos
+          </button>
+        </div>
+
+        <button 
+          id="clearBoughtBtn" 
+          onclick="clearBoughtItems()" 
+          class="btn btn-link btn-sm text-danger text-decoration-none fw-semibold p-0"
+        >
+          Limpiar comprados
+        </button>
+      </div>
     </div>
 
     <!-- Lista de Productos Oficiales Mercadona -->
@@ -196,6 +225,91 @@
             Ver en Mercadona ↗
           </a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ENCARGOS CARNICERÍA / TIENDA LOCAL (Bootstrap Modal) -->
+  <div class="modal fade" id="localStoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content rounded-4 border-0 shadow-lg p-2">
+        
+        <div class="modal-header border-0 pb-1">
+          <div>
+            <h5 class="modal-title fw-bold fs-6 mb-0">🥩 Encargo de Tienda Local</h5>
+            <small class="text-muted" style="font-size: 0.72rem;">Carnicería, frutería, panadería, etc.</small>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form id="localStoreForm" onsubmit="handleLocalStoreSubmit(event)" class="modal-body pt-2 space-y-3">
+          
+          <!-- Selector visual de tiendas -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.68rem;">¿A qué tienda va?</label>
+            <div class="row g-2" id="storeTypeSelector">
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Carnicería', '🥩')" class="store-type-btn btn btn-outline-warning text-dark w-100 py-2 rounded-3 active fw-bold text-center">
+                  <div class="fs-4">🥩</div>
+                  <div style="font-size: 0.72rem;">Carnicería</div>
+                </button>
+              </div>
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Frutería', '🍎')" class="store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center">
+                  <div class="fs-4">🍎</div>
+                  <div style="font-size: 0.72rem;">Frutería</div>
+                </button>
+              </div>
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Panadería', '🥖')" class="store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center">
+                  <div class="fs-4">🥖</div>
+                  <div style="font-size: 0.72rem;">Panadería</div>
+                </button>
+              </div>
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Pescadería', '🐟')" class="store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center">
+                  <div class="fs-4">🐟</div>
+                  <div style="font-size: 0.72rem;">Pescadería</div>
+                </button>
+              </div>
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Farmacia', '💊')" class="store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center">
+                  <div class="fs-4">💊</div>
+                  <div style="font-size: 0.72rem;">Farmacia</div>
+                </button>
+              </div>
+              <div class="col-4">
+                <button type="button" onclick="selectStoreType('Otra tienda', '🏪')" class="store-type-btn btn btn-outline-secondary w-100 py-2 rounded-3 text-center">
+                  <div class="fs-4">🏪</div>
+                  <div style="font-size: 0.72rem;">Otra tienda</div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nombre -->
+          <div class="mb-2">
+            <label for="localProductName" class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.68rem;">¿Qué hay que pedir? *</label>
+            <input type="text" id="localProductName" class="form-control form-control-sm fw-semibold" placeholder="Ej: Pechuga de pollo, 4 barras de pan..." required>
+          </div>
+
+          <!-- Cantidad -->
+          <div class="mb-2">
+            <label for="localProductQty" class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.68rem;">Cantidad o Peso</label>
+            <input type="text" id="localProductQty" class="form-control form-control-sm" placeholder="Ej: 1/2 kg, 4 filetes, 2 barras...">
+          </div>
+
+          <!-- Nota -->
+          <div class="mb-3">
+            <label for="localProductNote" class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 0.68rem;">Nota o encargo especial</label>
+            <input type="text" id="localProductNote" class="form-control form-control-sm" placeholder="Ej: 'Que esté bien picada', 'Sin grasa'...">
+          </div>
+
+          <button type="submit" class="btn btn-warning text-dark fw-bold w-100 rounded-pill py-2 shadow-sm">
+            Guardar encargo ✓
+          </button>
+        </form>
+
       </div>
     </div>
   </div>
