@@ -1,0 +1,16 @@
+{
+  "name": "Despensa Familiar Barbado",
+  "short_name": "Despensa",
+  "description": "Lista de la compra compartida para la familia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#00875a",
+  "theme_color": "#00875a",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}
